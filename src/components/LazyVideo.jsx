@@ -3,17 +3,21 @@ import { useEffect, useRef, useState } from "react";
 /*
   Performance-optimised lazy video:
   - preload="none" initially so off-screen videos download nothing
-  - When within ~250px of viewport, switches to preload="auto" (smart preload)
+  - When within ~250px of viewport, switches to preload="metadata" (fetches
+    only the first few hundred KB — enough for the moov atom + first frame)
+  - When actually visible, switches to preload="auto" so the browser
+    progressively streams the rest via byte-range requests
   - IntersectionObserver controls play/pause based on visibility
-  - Pauses + unloads when scrolled far away to free memory
+  - Pauses when scrolled away to free memory
   - dark gradient background prevents blank placeholder before load
 */
 export default function LazyVideo({ src, className = "", style = {}, objectPos = "center" }) {
   const ref = useRef(null);
   const [nearby, setNearby] = useState(false);
+  const [visible, setVisible] = useState(false);
 
-  // Stage 1 — proximity detection: start preloading before the video
-  // actually enters the viewport so playback is smooth on arrival.
+  // Stage 1 — proximity detection: fetch metadata before the video
+  // actually enters the viewport so playback starts quickly on arrival.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -31,6 +35,7 @@ export default function LazyVideo({ src, className = "", style = {}, objectPos =
   }, []);
 
   // Stage 2 — visibility: play when visible, pause when not.
+  // Also upgrade preload to "auto" only when actually on-screen.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -41,7 +46,6 @@ export default function LazyVideo({ src, className = "", style = {}, objectPos =
     };
 
     const onCanPlay = () => {
-      // Only auto-play if currently visible
       if (el.getBoundingClientRect().top < window.innerHeight && el.getBoundingClientRect().bottom > 0) {
         tryPlay();
       }
@@ -53,8 +57,10 @@ export default function LazyVideo({ src, className = "", style = {}, objectPos =
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) {
+            setVisible(true);
             if (el.readyState >= 2) tryPlay();
           } else {
+            setVisible(false);
             el.pause();
           }
         });
@@ -68,6 +74,9 @@ export default function LazyVideo({ src, className = "", style = {}, objectPos =
       el.removeEventListener("canplay", onCanPlay);
     };
   }, []);
+
+  // preload strategy: none → metadata (nearby) → auto (visible)
+  const preload = visible ? "auto" : nearby ? "metadata" : "none";
 
   return (
     <video
@@ -84,7 +93,7 @@ export default function LazyVideo({ src, className = "", style = {}, objectPos =
       muted
       loop
       playsInline
-      preload={nearby ? "auto" : "none"}
+      preload={preload}
       disablePictureInPicture
       // @ts-ignore
       disableRemotePlayback

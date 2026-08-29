@@ -156,17 +156,26 @@ function FlowerTrail() {
 
 /* ---- Video player: natural aspect ratio, no controls, auto-replay ----
    Videos 1-9 use object-contain so the browser sizes them naturally.
-   Video 10 gets a scale-down to ensure the full frame is visible. */
+   Video 10 gets a scale-down to ensure the full frame is visible.
+   Uses preload="metadata" + Cloudinary poster for fast startup; original
+   Cloudinary URLs support byte-range requests so the browser streams
+   progressively without waiting for the full file. */
 function VideoPlayer({ video, index, videoRef, onEnded }) {
   const isFirst = index === 0;
   const isTenth = index === MEMORY_VIDEOS.length - 1;
+  const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   // Autoplay on src change — the parent controls mounting so this is the new video
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+    setError(false);
     el.play().catch(() => {});
-  }, [video.src, videoRef]);
+  }, [video.src, videoRef, retryKey]);
+
+  const handleError = () => setError(true);
+  const handleRetry = () => { setError(false); setRetryKey((k) => k + 1); };
 
   // Videos 1-9: natural contain sizing. Video 10: force maxHeight slightly smaller
   // so the full frame stays visible without any cropping from the container.
@@ -185,16 +194,26 @@ function VideoPlayer({ video, index, videoRef, onEnded }) {
     >
       <div className="relative rounded-2xl overflow-hidden glass glass-gold flex items-center justify-center" style={{ maxHeight: "100%" }}>
         <div className="absolute top-0 left-0 right-0 h-px z-10" style={{ background: "linear-gradient(90deg, transparent, rgba(245,196,81,0.6), rgba(244,114,182,0.5), transparent)" }} />
-        <video
-          ref={videoRef}
-          src={video.src}
-          playsInline
-          preload="auto"
-          autoPlay
-          onEnded={onEnded}
-          className="block"
-          style={videoStyle}
-        />
+        {error ? (
+          <div className="flex flex-col items-center justify-center gap-4" style={{ minHeight: "200px" }}>
+            <p className="font-body text-sm text-[#a99fce]">Couldn't load this video.</p>
+            <button onClick={handleRetry} data-testid="video-retry" className="px-6 py-2.5 rounded-full font-body text-sm text-white" style={{ background: "linear-gradient(120deg,#8b5cf6,#ec4899)" }}>Try again</button>
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            src={video.src}
+            poster={video.poster}
+            playsInline
+            preload="metadata"
+            autoPlay
+            onEnded={onEnded}
+            onError={handleError}
+            key={retryKey}
+            className="block"
+            style={videoStyle}
+          />
+        )}
       </div>
     </motion.div>
   );
@@ -324,15 +343,15 @@ export default function MemoryExperience({ onClose, audioRef }) {
     touchStartX.current = null;
   };
 
-  // Preload next video via <link rel=preload>
+  // Warm the next video's CDN connection (DNS + TCP + TLS) without downloading
+  // the full file. The browser's own video preload="metadata" will fetch
+  // just the first chunk when the next VideoPlayer mounts.
   useEffect(() => {
     if (!introDone) return;
     const nextIdx = (index + 1) % MEMORY_VIDEOS.length;
     const link = document.createElement("link");
-    link.rel = "preload";
-    link.as = "fetch";
+    link.rel = "preconnect";
     link.href = MEMORY_VIDEOS[nextIdx].src;
-    link.crossOrigin = "anonymous";
     document.head.appendChild(link);
     return () => { document.head.removeChild(link); };
   }, [index, introDone]);

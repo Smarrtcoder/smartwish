@@ -41,15 +41,14 @@ export default function Videos({ lenisRef, storyEntered }) {
   const [showBT, setShowBT] = useState(false);
   const originalDuration = useRef(1.3);
 
-  // Preload all videos when the Videos section approaches
+  // Warm CDN connections for the section videos without downloading them.
+  // The LazyVideo component handles per-video preload via IntersectionObserver.
   useEffect(() => {
     if (!inView) return;
     ASSETS.videos.forEach((v) => {
       const link = document.createElement("link");
-      link.rel = "preload";
-      link.as = "fetch";
+      link.rel = "preconnect";
       link.href = v.src;
-      link.crossOrigin = "anonymous";
       document.head.appendChild(link);
     });
   }, [inView]);
