@@ -154,28 +154,101 @@ function FlowerTrail() {
   );
 }
 
+/* ---- Cinematic end-of-video message transition ----
+   Shows a brief message over the video's final frame, then restarts.
+   Duration scales with message length so long messages stay readable. */
+function computeMessageDuration(text) {
+  const words = text.split(/\s+/).length;
+  const chars = text.length;
+  if (chars <= 30) return 2.0;
+  if (chars <= 60) return 2.5 + (chars - 30) / 60 * 0.7;
+  if (chars <= 100) return 3.2 + (chars - 60) / 40 * 0.3;
+  return 3.5 + Math.min((chars - 100) / 50, 1.0);
+}
+
+function EndTransition({ message, onDone }) {
+  const duration = computeMessageDuration(message);
+  const fadeOutStart = duration - 0.35;
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-[15] flex items-center justify-center pointer-events-none"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
+    >
+      <motion.div
+        className="absolute inset-0"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.55 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        style={{ background: "radial-gradient(ellipse at center, rgba(6,6,26,0.7) 0%, rgba(6,6,26,0.35) 55%, transparent 85%)" }}
+      />
+      <motion.p
+        className="relative font-hand text-center px-6 sm:px-8 max-w-[90%] sm:max-w-[75%]"
+        style={{
+          color: "#f5edd6",
+          fontSize: "clamp(1.15rem, 4vw, 2rem)",
+          lineHeight: 1.55,
+          letterSpacing: "0.01em",
+          fontWeight: 500,
+          textShadow: "0 2px 16px rgba(0,0,0,0.85), 0 0 30px rgba(139,92,246,0.35), 0 0 12px rgba(245,196,81,0.2)",
+        }}
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: [0, 1, 1, 0], y: [14, 0, 0, -6] }}
+        transition={{
+          duration: duration,
+          times: [0, 0.18, fadeOutStart / duration, 1],
+          ease: "easeOut",
+        }}
+        onAnimationComplete={onDone}
+      >
+        {message}
+      </motion.p>
+    </motion.div>
+  );
+}
+
 /* ---- Video player: natural aspect ratio, no controls, auto-replay ----
    Videos 1-9 use object-contain so the browser sizes them naturally.
    Video 10 gets a scale-down to ensure the full frame is visible.
    Uses preload="metadata" + Cloudinary poster for fast startup; original
    Cloudinary URLs support byte-range requests so the browser streams
-   progressively without waiting for the full file. */
-function VideoPlayer({ video, index, videoRef, onEnded }) {
+   progressively without waiting for the full file.
+   On ended: shows a cinematic message transition over the final frame,
+   then restarts the same video from 0:00. */
+function VideoPlayer({ video, index, videoRef }) {
   const isFirst = index === 0;
   const isTenth = index === MEMORY_VIDEOS.length - 1;
   const [error, setError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const [showEndMsg, setShowEndMsg] = useState(false);
 
   // Autoplay on src change — the parent controls mounting so this is the new video
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
     setError(false);
+    setShowEndMsg(false);
     el.play().catch(() => {});
   }, [video.src, videoRef, retryKey]);
 
   const handleError = () => setError(true);
   const handleRetry = () => { setError(false); setRetryKey((k) => k + 1); };
+
+  const handleEnded = () => {
+    setShowEndMsg(true);
+  };
+
+  const handleEndTransitionDone = () => {
+    setShowEndMsg(false);
+    const el = videoRef.current;
+    if (el) {
+      el.currentTime = 0;
+      el.play().catch(() => {});
+    }
+  };
 
   // Videos 1-9: natural contain sizing. Video 10: force maxHeight slightly smaller
   // so the full frame stays visible without any cropping from the container.
@@ -200,19 +273,26 @@ function VideoPlayer({ video, index, videoRef, onEnded }) {
             <button onClick={handleRetry} data-testid="video-retry" className="px-6 py-2.5 rounded-full font-body text-sm text-white" style={{ background: "linear-gradient(120deg,#8b5cf6,#ec4899)" }}>Try again</button>
           </div>
         ) : (
-          <video
-            ref={videoRef}
-            src={video.src}
-            poster={video.poster}
-            playsInline
-            preload="metadata"
-            autoPlay
-            onEnded={onEnded}
-            onError={handleError}
-            key={retryKey}
-            className="block"
-            style={videoStyle}
-          />
+          <>
+            <video
+              ref={videoRef}
+              src={video.src}
+              poster={video.poster}
+              playsInline
+              preload="metadata"
+              autoPlay
+              onEnded={handleEnded}
+              onError={handleError}
+              key={retryKey}
+              className="block"
+              style={videoStyle}
+            />
+            <AnimatePresence>
+              {showEndMsg && (
+                <EndTransition message={video.message} onDone={handleEndTransitionDone} />
+              )}
+            </AnimatePresence>
+          </>
         )}
       </div>
     </motion.div>
@@ -406,12 +486,6 @@ export default function MemoryExperience({ onClose, audioRef }) {
               video={MEMORY_VIDEOS[index]}
               index={index}
               videoRef={videoRef}
-              onEnded={() => {
-                const el = videoRef.current;
-                if (el) {
-                  setTimeout(() => { el.currentTime = 0; el.play().catch(() => {}); }, 2000);
-                }
-              }}
             />
           </AnimatePresence>
         </div>
