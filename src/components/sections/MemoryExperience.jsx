@@ -155,34 +155,62 @@ function FlowerTrail() {
 }
 
 /* ---- Cinematic end-of-video message transition ----
-   Shows a brief message over the video's final frame, then restarts.
-   Duration scales with message length so long messages stay readable. */
-function computeMessageDuration(text) {
-  const words = text.split(/\s+/).length;
+   Phase 1: message appears on the video's final frame (fade-in + scale)
+   Phase 2: message flies upward into the empty space above the video
+   Phase 3: message stays in the empty space (readable, stationary)
+   Phase 4: message fades out, then the same video restarts
+   Fly distance is measured dynamically from the container so it works
+   on every screen size. No new assets, no network load. */
+function computeHoldDuration(text) {
   const chars = text.length;
-  if (chars <= 30) return 2.0;
-  if (chars <= 60) return 2.5 + (chars - 30) / 60 * 0.7;
-  if (chars <= 100) return 3.2 + (chars - 60) / 40 * 0.3;
-  return 3.5 + Math.min((chars - 100) / 50, 1.0);
+  if (chars <= 30) return 3.0;
+  if (chars <= 60) return 3.3;
+  if (chars <= 100) return 3.7;
+  return 4.0;
 }
 
 function EndTransition({ message, onDone }) {
-  const duration = computeMessageDuration(message);
-  const fadeOutStart = duration - 0.35;
+  const containerRef = useRef(null);
+  const [flyY, setFlyY] = useState(-150);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const h = el.getBoundingClientRect().height;
+    // Message starts at center (50%) and flies to the upper area.
+    // Target: max(15% of height, 80px) from top — stays clear of the
+    // back button and video number indicator.
+    const targetY = Math.max(h * 0.15, 80);
+    const centerY = h * 0.5;
+    setFlyY(targetY - centerY);
+  }, []);
+
+  const appearDur = 0.6;
+  const flyDur = 0.8;
+  const holdDur = computeHoldDuration(message);
+  const fadeOutDur = 0.4;
+  const total = appearDur + flyDur + holdDur + fadeOutDur;
+
+  const t1 = appearDur / total;
+  const t2 = (appearDur + flyDur) / total;
+  const t3 = (appearDur + flyDur + holdDur) / total;
 
   return (
     <motion.div
+      ref={containerRef}
       className="absolute inset-0 z-[15] flex items-center justify-center pointer-events-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.35 }}
+      transition={{ duration: 0.3 }}
     >
+      {/* Subtle dark overlay on the video area — fades in during appear,
+          fades out as the message leaves the video */}
       <motion.div
         className="absolute inset-0"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.55 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
+        animate={{ opacity: [0, 0.45, 0.12, 0.08, 0] }}
+        transition={{ duration: total, times: [0, t1, t2, t3, 1], ease: "easeOut" }}
         style={{ background: "radial-gradient(ellipse at center, rgba(6,6,26,0.7) 0%, rgba(6,6,26,0.35) 55%, transparent 85%)" }}
       />
       <motion.p
@@ -195,12 +223,16 @@ function EndTransition({ message, onDone }) {
           fontWeight: 500,
           textShadow: "0 2px 16px rgba(0,0,0,0.85), 0 0 30px rgba(139,92,246,0.35), 0 0 12px rgba(245,196,81,0.2)",
         }}
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: [0, 1, 1, 0], y: [14, 0, 0, -6] }}
+        initial={{ opacity: 0, y: 0, scale: 0.92 }}
+        animate={{
+          opacity: [0, 1, 1, 1, 0],
+          y: [0, 0, flyY, flyY, flyY],
+          scale: [0.92, 1, 1, 1, 1],
+        }}
         transition={{
-          duration: duration,
-          times: [0, 0.18, fadeOutStart / duration, 1],
-          ease: "easeOut",
+          duration: total,
+          times: [0, t1, t2, t3, 1],
+          ease: [0.22, 1, 0.36, 1],
         }}
         onAnimationComplete={onDone}
       >
@@ -259,7 +291,7 @@ function VideoPlayer({ video, index, videoRef }) {
   return (
     <motion.div
       key={video.src}
-      className="flex flex-col items-center justify-center w-full h-full"
+      className="relative flex flex-col items-center justify-center w-full h-full"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.02 }}
@@ -273,28 +305,26 @@ function VideoPlayer({ video, index, videoRef }) {
             <button onClick={handleRetry} data-testid="video-retry" className="px-6 py-2.5 rounded-full font-body text-sm text-white" style={{ background: "linear-gradient(120deg,#8b5cf6,#ec4899)" }}>Try again</button>
           </div>
         ) : (
-          <>
-            <video
-              ref={videoRef}
-              src={video.src}
-              poster={video.poster}
-              playsInline
-              preload="metadata"
-              autoPlay
-              onEnded={handleEnded}
-              onError={handleError}
-              key={retryKey}
-              className="block"
-              style={videoStyle}
-            />
-            <AnimatePresence>
-              {showEndMsg && (
-                <EndTransition message={video.message} onDone={handleEndTransitionDone} />
-              )}
-            </AnimatePresence>
-          </>
+          <video
+            ref={videoRef}
+            src={video.src}
+            poster={video.poster}
+            playsInline
+            preload="metadata"
+            autoPlay
+            onEnded={handleEnded}
+            onError={handleError}
+            key={retryKey}
+            className="block"
+            style={videoStyle}
+          />
         )}
       </div>
+      <AnimatePresence>
+        {showEndMsg && !error && (
+          <EndTransition message={video.message} onDone={handleEndTransitionDone} />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
