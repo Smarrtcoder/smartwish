@@ -163,30 +163,43 @@ function FlowerTrail() {
    on every screen size. No new assets, no network load. */
 function computeHoldDuration(text) {
   const chars = text.length;
-  if (chars <= 30) return 3.0;
-  if (chars <= 60) return 3.3;
-  if (chars <= 100) return 3.7;
-  return 4.0;
+  if (chars <= 30) return 4.0;
+  if (chars <= 60) return 4.5;
+  if (chars <= 100) return 5.0;
+  return 6.0;
 }
 
-function EndTransition({ message, onDone }) {
+function EndTransition({ message, onDone, videoWrapperRef }) {
   const containerRef = useRef(null);
+  const textRef = useRef(null);
   const [flyY, setFlyY] = useState(-150);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const h = el.getBoundingClientRect().height;
-    // Message starts at center (50%) and flies to the upper area.
-    // Target: max(15% of height, 80px) from top — stays clear of the
-    // back button and video number indicator.
-    const targetY = Math.max(h * 0.15, 80);
-    const centerY = h * 0.5;
-    setFlyY(targetY - centerY);
-  }, []);
+    const container = containerRef.current;
+    const wrapper = videoWrapperRef && videoWrapperRef.current;
+    const text = textRef.current;
+    if (!container || !wrapper) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const textRect = text ? text.getBoundingClientRect() : null;
+
+    const currentY = containerRect.height / 2;
+    const videoTop = wrapperRect.top - containerRect.top;
+    const textH = textRect ? textRect.height : 40;
+
+    // Target: comfortably above the video's top edge, clamped so the
+    // message stays fully inside the container and clears the back
+    // button area (top ~70px).
+    const desiredY = videoTop - 30;
+    const minY = 70 + textH / 2;
+    const targetY = Math.max(desiredY, minY);
+
+    setFlyY(targetY - currentY);
+  }, [videoWrapperRef]);
 
   const appearDur = 0.6;
-  const flyDur = 0.8;
+  const flyDur = 0.9;
   const holdDur = computeHoldDuration(message);
   const fadeOutDur = 0.4;
   const total = appearDur + flyDur + holdDur + fadeOutDur;
@@ -214,6 +227,7 @@ function EndTransition({ message, onDone }) {
         style={{ background: "radial-gradient(ellipse at center, rgba(6,6,26,0.7) 0%, rgba(6,6,26,0.35) 55%, transparent 85%)" }}
       />
       <motion.p
+        ref={textRef}
         className="relative font-hand text-center px-6 sm:px-8 max-w-[90%] sm:max-w-[75%]"
         style={{
           color: "#f5edd6",
@@ -256,6 +270,7 @@ function VideoPlayer({ video, index, videoRef }) {
   const [error, setError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [showEndMsg, setShowEndMsg] = useState(false);
+  const videoWrapperRef = useRef(null);
 
   // Autoplay on src change — the parent controls mounting so this is the new video
   useEffect(() => {
@@ -297,7 +312,7 @@ function VideoPlayer({ video, index, videoRef }) {
       exit={{ opacity: 0, scale: 1.02 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
-      <div className="relative rounded-2xl overflow-hidden glass glass-gold flex items-center justify-center" style={{ maxHeight: "100%" }}>
+      <div ref={videoWrapperRef} className="relative rounded-2xl overflow-hidden glass glass-gold flex items-center justify-center" style={{ maxHeight: "100%" }}>
         <div className="absolute top-0 left-0 right-0 h-px z-10" style={{ background: "linear-gradient(90deg, transparent, rgba(245,196,81,0.6), rgba(244,114,182,0.5), transparent)" }} />
         {error ? (
           <div className="flex flex-col items-center justify-center gap-4" style={{ minHeight: "200px" }}>
@@ -322,7 +337,7 @@ function VideoPlayer({ video, index, videoRef }) {
       </div>
       <AnimatePresence>
         {showEndMsg && !error && (
-          <EndTransition message={video.message} onDone={handleEndTransitionDone} />
+          <EndTransition message={video.message} onDone={handleEndTransitionDone} videoWrapperRef={videoWrapperRef} />
         )}
       </AnimatePresence>
     </motion.div>
