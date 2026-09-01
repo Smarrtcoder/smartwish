@@ -169,13 +169,23 @@ function computeHoldDuration(text) {
   return 6.0;
 }
 
-function EndTransition({ message, onDone, videoWrapperRef }) {
+/* flyMode:
+   "none"   – message stays centered in the video (no fly-out)
+   "above"  – message flies to the blank space above the video
+   "heading" – message flies to just above the "Happy Birthday" heading */
+function EndTransition({ message, onDone, videoWrapperRef, headingRef, flyMode }) {
   const containerRef = useRef(null);
   const textRef = useRef(null);
-  const [flyY, setFlyY] = useState(-150);
+  const [flyY, setFlyY] = useState(0);
   const [flyX, setFlyX] = useState(0);
 
   useEffect(() => {
+    if (flyMode === "none") {
+      setFlyY(0);
+      setFlyX(0);
+      return;
+    }
+
     const container = containerRef.current;
     const wrapper = videoWrapperRef && videoWrapperRef.current;
     const text = textRef.current;
@@ -187,10 +197,26 @@ function EndTransition({ message, onDone, videoWrapperRef }) {
 
     const currentY = containerRect.height / 2;
     const currentX = containerRect.width / 2;
-    const videoTop = wrapperRect.top - containerRect.top;
     const textH = textRect ? textRect.height : 40;
 
-    // Y: center of the blank space above the video
+    if (flyMode === "heading") {
+      // Settle above the "Happy Birthday" heading without overlapping it
+      const heading = headingRef && headingRef.current;
+      if (heading) {
+        const headingRect = heading.getBoundingClientRect();
+        const headingTop = headingRect.top - containerRect.top;
+        const targetY = Math.max(headingTop - textH / 2 - 16, 70 + textH / 2);
+        setFlyY(targetY - currentY);
+        // Center horizontally over the heading
+        const headingCenterX = headingRect.left + headingRect.width / 2 - containerRect.left;
+        setFlyX(headingCenterX - currentX);
+        return;
+      }
+      // Fallback to "above" if heading ref not available
+    }
+
+    // flyMode === "above"
+    const videoTop = wrapperRect.top - containerRect.top;
     const spaceTop = 70;
     const spaceBottom = videoTop - 20;
     const spaceMid = (spaceTop + spaceBottom) / 2;
@@ -198,22 +224,18 @@ function EndTransition({ message, onDone, videoWrapperRef }) {
     const targetY = Math.max(spaceMid, minY);
     setFlyY(targetY - currentY);
 
-    // X: on desktop, shift right so the message settles in the gap
-    // between the video and the "Happy Birthday" column, not directly
-    // above the video center. On mobile (stacked layout) stay centered.
     const isDesktop = window.matchMedia("(min-width: 768px)").matches;
     if (isDesktop) {
       const videoRight = wrapperRect.right - containerRect.left;
-      // Target: past the video's right edge, into the open gap area
       const targetX = videoRight + containerRect.width * 0.08;
       setFlyX(targetX - currentX);
     } else {
       setFlyX(0);
     }
-  }, [videoWrapperRef]);
+  }, [videoWrapperRef, headingRef, flyMode]);
 
   const appearDur = 0.6;
-  const flyDur = 1.2;
+  const flyDur = flyMode === "none" ? 0 : 1.2;
   const holdDur = computeHoldDuration(message);
   const fadeOutDur = 0.4;
   const total = appearDur + flyDur + holdDur + fadeOutDur;
@@ -279,13 +301,21 @@ function EndTransition({ message, onDone, videoWrapperRef }) {
    progressively without waiting for the full file.
    On ended: shows a cinematic message transition over the final frame,
    then restarts the same video from 0:00. */
-function VideoPlayer({ video, index, videoRef }) {
+const CENTERED_VIDEOS = new Set([0, 4, 6, 7, 8]);
+const HEADING_VIDEOS = new Set([2]);
+
+function VideoPlayer({ video, index, videoRef, headingRef }) {
   const isFirst = index === 0;
   const isTenth = index === MEMORY_VIDEOS.length - 1;
   const [error, setError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [showEndMsg, setShowEndMsg] = useState(false);
   const videoWrapperRef = useRef(null);
+  const flyMode = CENTERED_VIDEOS.has(index)
+    ? "none"
+    : HEADING_VIDEOS.has(index)
+      ? "heading"
+      : "above";
 
   // Autoplay on src change — the parent controls mounting so this is the new video
   useEffect(() => {
@@ -352,7 +382,13 @@ function VideoPlayer({ video, index, videoRef }) {
       </div>
       <AnimatePresence>
         {showEndMsg && !error && (
-          <EndTransition message={video.message} onDone={handleEndTransitionDone} videoWrapperRef={videoWrapperRef} />
+          <EndTransition
+            message={video.message}
+            onDone={handleEndTransitionDone}
+            videoWrapperRef={videoWrapperRef}
+            headingRef={headingRef}
+            flyMode={flyMode}
+          />
         )}
       </AnimatePresence>
     </motion.div>
@@ -368,6 +404,7 @@ export default function MemoryExperience({ onClose, audioRef }) {
   const musicTimeRef = useRef(0);
   const musicVolumeRef = useRef(0);
   const videoRef = useRef(null);
+  const headingRef = useRef(null);
 
   // Pause website music on entry, preserve position + volume
   useEffect(() => {
@@ -546,6 +583,7 @@ export default function MemoryExperience({ onClose, audioRef }) {
               video={MEMORY_VIDEOS[index]}
               index={index}
               videoRef={videoRef}
+              headingRef={headingRef}
             />
           </AnimatePresence>
         </div>
@@ -563,6 +601,7 @@ export default function MemoryExperience({ onClose, audioRef }) {
 
             {/* Heading */}
             <motion.h2
+              ref={headingRef}
               className="font-serif-display text-3xl md:text-4xl lg:text-5xl font-bold leading-tight"
               style={{ textShadow: "0 0 30px rgba(245,196,81,0.5), 0 0 20px rgba(236,72,153,0.3), 0 2px 10px rgba(0,0,0,0.6)" }}
               animate={{ opacity: [0.9, 1, 0.9] }}
