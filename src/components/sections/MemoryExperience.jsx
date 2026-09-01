@@ -188,18 +188,21 @@ function EndTransition({ message, onDone, videoWrapperRef }) {
     const videoTop = wrapperRect.top - containerRect.top;
     const textH = textRect ? textRect.height : 40;
 
-    // Target: comfortably above the video's top edge, clamped so the
-    // message stays fully inside the container and clears the back
-    // button area (top ~70px).
-    const desiredY = videoTop - 30;
-    const minY = 70 + textH / 2;
-    const targetY = Math.max(desiredY, minY);
+    // The blank space is from the top of the container (minus the back
+    // button area ~70px) to the top of the video. Place the message at
+    // the visual center of that space so it's clearly separated from
+    // the video, not hugging its top edge.
+    const spaceTop = 70;
+    const spaceBottom = videoTop - 20;
+    const spaceMid = (spaceTop + spaceBottom) / 2;
+    const minY = spaceTop + textH / 2;
+    const targetY = Math.max(spaceMid, minY);
 
     setFlyY(targetY - currentY);
   }, [videoWrapperRef]);
 
   const appearDur = 0.6;
-  const flyDur = 0.9;
+  const flyDur = 1.2;
   const holdDur = computeHoldDuration(message);
   const fadeOutDur = 0.4;
   const total = appearDur + flyDur + holdDur + fadeOutDur;
