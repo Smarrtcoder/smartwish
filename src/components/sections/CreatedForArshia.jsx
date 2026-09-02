@@ -232,39 +232,102 @@ export default function CreatedForArshia({ onEnter }) {
             </motion.p>
           </motion.div>
 
-          {/* Enter CTA — enhanced premium glow */}
-          <motion.button
-            onClick={onEnter}
-            data-testid="enter-memories"
-            whileHover={{ scale: 1.06, boxShadow: "0 24px 70px rgba(139,92,246,0.55), 0 0 50px rgba(245,196,81,0.4), 0 0 80px rgba(236,72,153,0.25)" }}
-            whileTap={{ scale: 0.95 }}
-            className="relative inline-flex items-center gap-3 px-10 py-5 rounded-2xl font-body text-lg text-[#f5edd6] tracking-wide"
-            style={{
-              background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.15), rgba(245,196,81,0.12))",
-              border: "1.5px solid rgba(245,196,81,0.45)",
-              backdropFilter: "blur(12px)",
-            }}
-            animate={{
-              boxShadow: [
-                "0 10px 40px rgba(139,92,246,0.3), 0 0 30px rgba(245,196,81,0.2), inset 0 0 20px rgba(245,196,81,0.05)",
-                "0 14px 50px rgba(139,92,246,0.45), 0 0 45px rgba(245,196,81,0.35), inset 0 0 30px rgba(245,196,81,0.1)",
-                "0 10px 40px rgba(139,92,246,0.3), 0 0 30px rgba(245,196,81,0.2), inset 0 0 20px rgba(245,196,81,0.05)",
-              ],
-              borderColor: [
-                "rgba(245,196,81,0.4)",
-                "rgba(245,196,81,0.65)",
-                "rgba(245,196,81,0.4)",
-              ],
-            }}
-            transition={{
-              boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" },
-              borderColor: { duration: 3, repeat: Infinity, ease: "easeInOut" },
-            }}
-          >
-            <span className="text-xl" style={{ textShadow: "0 0 10px rgba(245,196,81,0.6)" }}>✦</span>
-            Enter The Memories
-            <motion.span animate={{ x: [0, 5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>→</motion.span>
-          </motion.button>
+          {/* Enter CTA — enhanced premium glow with shimmer + orbiting border trail */}
+          <div className="relative inline-block">
+            {/* Orbiting decorative trail around the button border */}
+            <div className="absolute inset-0 pointer-events-none" style={{ margin: -14 }}>
+              {[0, 1, 2].map((trailIdx) => {
+                const emojis = ["🌸", "♡", "✦"];
+                const colors = ["#f9a8d4", "#f5c451", "#c4b5fd"];
+                const emoji = emojis[trailIdx];
+                const color = colors[trailIdx];
+                const startDelay = trailIdx * 1.8;
+                return (
+                  <motion.span
+                    key={trailIdx}
+                    className="absolute"
+                    style={{
+                      fontSize: 11,
+                      color,
+                      textShadow: `0 0 8px ${color}, 0 0 14px ${color}`,
+                      left: "50%",
+                      top: "50%",
+                      marginLeft: -6,
+                      marginTop: -6,
+                    }}
+                    animate={{
+                      offsetDistance: ["0%", "100%"],
+                      opacity: [0, 1, 1, 0, 0],
+                    }}
+                    transition={{
+                      duration: 8,
+                      delay: startDelay,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      times: [0, 0.05, 0.5, 0.55, 1],
+                    }}
+                    // offset-path set via style for CSS orbit
+                    // eslint-disable-next-line
+                    {...{
+                      style: {
+                        fontSize: 11,
+                        color,
+                        textShadow: `0 0 8px ${color}, 0 0 14px ${color}`,
+                        offsetPath: 'path("M -150,-32 L 150,-32 L 150,32 L -150,32 Z")',
+                        left: "50%",
+                        top: "50%",
+                      },
+                    }}
+                  >
+                    {emoji}
+                  </motion.span>
+                );
+              })}
+            </div>
+
+            <motion.button
+              onClick={onEnter}
+              data-testid="enter-memories"
+              whileHover={{ scale: 1.06, boxShadow: "0 24px 70px rgba(139,92,246,0.55), 0 0 50px rgba(245,196,81,0.4), 0 0 80px rgba(236,72,153,0.25)" }}
+              whileTap={{ scale: 0.95 }}
+              className="relative inline-flex items-center gap-3 px-10 py-5 rounded-2xl font-body text-lg text-[#f5edd6] tracking-wide overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.15), rgba(245,196,81,0.12))",
+                border: "1.5px solid rgba(245,196,81,0.45)",
+                backdropFilter: "blur(12px)",
+              }}
+              animate={{
+                boxShadow: [
+                  "0 10px 40px rgba(139,92,246,0.3), 0 0 30px rgba(245,196,81,0.2), inset 0 0 20px rgba(245,196,81,0.05)",
+                  "0 14px 50px rgba(139,92,246,0.45), 0 0 45px rgba(245,196,81,0.35), inset 0 0 30px rgba(245,196,81,0.1)",
+                  "0 10px 40px rgba(139,92,246,0.3), 0 0 30px rgba(245,196,81,0.2), inset 0 0 20px rgba(245,196,81,0.05)",
+                ],
+                borderColor: [
+                  "rgba(245,196,81,0.4)",
+                  "rgba(245,196,81,0.65)",
+                  "rgba(245,196,81,0.4)",
+                ],
+              }}
+              transition={{
+                boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                borderColor: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+              }}
+            >
+              {/* Shimmer sweep — golden light traveling across the button */}
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: "linear-gradient(110deg, transparent 30%, rgba(255,240,200,0.35) 50%, transparent 70%)",
+                  backgroundSize: "200% 100%",
+                }}
+                animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 1.5 }}
+              />
+              <span className="relative text-xl" style={{ textShadow: "0 0 10px rgba(245,196,81,0.6)" }}>✦</span>
+              <span className="relative">Enter The Memories</span>
+              <motion.span className="relative" animate={{ x: [0, 5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>→</motion.span>
+            </motion.button>
+          </div>
         </motion.div>
       </div>
     </section>
