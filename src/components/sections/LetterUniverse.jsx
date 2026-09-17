@@ -413,6 +413,7 @@ function FloatingLetter({ letter, onClose }) {
         transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
         className="relative max-w-2xl w-full flex flex-col items-center pointer-events-auto"
         style={{ maxHeight: "84vh" }}
+        onClick={onClose}
       >
         {/* emoji + title — fixed at top, never moves */}
         <motion.div

@@ -45,9 +45,9 @@ function SecretTypewriter({ text }) {
     setParticles([]);
     setTyping(true);
     let i = 0;
-    const step = Math.max(1, Math.round(text.length / 250));
+    const step = Math.max(1, Math.round(text.length / 350));
     let lastTime = performance.now();
-    const interval = 5;
+    const interval = 8;
 
     const tick = (now) => {
       if (now - lastTime >= interval) {
@@ -296,6 +296,7 @@ function SecretGlassWindow({ text, onClose }) {
       <motion.div
         className="w-full max-w-2xl crystal-glass rounded-3xl relative flex flex-col"
         style={{ maxHeight: "84vh" }}
+        onClick={onClose}
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
