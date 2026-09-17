@@ -1,12 +1,64 @@
-import { useRef, useMemo, useEffect, useState } from "react";
+import { useRef, useMemo, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCursorPos } from "../../hooks/useCursorPos";
 
 const PLANET_COLORS = ["#f9a8d4", "#c4b5fd", "#fcd6a4", "#a4d4fc", "#fcb4c4"];
 const SPARK_COLORS = ["#f5c451", "#ffffff", "#f9a8d4", "#c4b5fd"];
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
+}
+
+/* ---- Elegant scroll-down indicator ---- */
+function ScrollIndicator({ scrollRef }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let raf;
+    const check = () => {
+      raf = requestAnimationFrame(check);
+      const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 40;
+      setVisible(hasMore);
+    };
+    check();
+    return () => cancelAnimationFrame(raf);
+  }, [scrollRef]);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none z-[96]"
+          initial={{ opacity: 0, y: 8, scale: 0.8 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 8, scale: 0.8 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          <motion.div
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{
+              background: "rgba(245,196,81,0.12)",
+              border: "1px solid rgba(245,196,81,0.35)",
+              boxShadow: "0 0 16px rgba(245,196,81,0.2)",
+              backdropFilter: "blur(4px)",
+            }}
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <motion.span
+              className="text-[#f5c451] text-base"
+              style={{ textShadow: "0 0 8px rgba(245,196,81,0.6)" }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              ↓
+            </motion.span>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 /* ---------------- Cinematic typewriter with synchronized magical sparkles ---------------- */
@@ -18,8 +70,9 @@ function UniverseTypewriter({ text }) {
   const [particles, setParticles] = useState([]);
   const [stars, setStars] = useState([]);
   const pid = useRef(0);
+  const rafRef = useRef(null);
 
-  const emitSparkle = () => {
+  const emitSparkle = useCallback(() => {
     const wrap = wrapRef.current;
     const cur = cursorRef.current;
     if (!wrap || !cur) return;
@@ -35,9 +88,9 @@ function UniverseTypewriter({ text }) {
     const size = 2 + Math.random() * 2.2;
     setParticles((p) => [...p.slice(-20), { id, x, y, color, drift, rise, life, size }]);
     setTimeout(() => setParticles((p) => p.filter((pt) => pt.id !== id)), life * 1000 + 80);
-  };
+  }, []);
 
-  const emitStar = () => {
+  const emitStar = useCallback(() => {
     const wrap = wrapRef.current;
     const cur = cursorRef.current;
     if (!wrap || !cur) return;
@@ -49,30 +102,41 @@ function UniverseTypewriter({ text }) {
     const life = 0.8 + Math.random() * 0.5;
     setStars((s) => [...s.slice(-8), { id, x, y, life }]);
     setTimeout(() => setStars((s) => s.filter((st) => st.id !== id)), life * 1000 + 80);
-  };
+  }, []);
 
   useEffect(() => {
     setShown("");
     setParticles([]);
     setStars([]);
     setTyping(true);
+
     let i = 0;
     const step = Math.max(1, Math.round(text.length / 350));
-    const id = setInterval(() => {
-      i += step;
-      setShown(text.slice(0, i));
-      if (i < text.length) {
-        emitSparkle();
-        if (Math.random() < 0.22) emitStar();
+    let lastTime = performance.now();
+    const interval = 8; // ms between steps
+
+    const tick = (now) => {
+      if (now - lastTime >= interval) {
+        lastTime = now;
+        i += step;
+        setShown(text.slice(0, i));
+        if (i < text.length) {
+          emitSparkle();
+          if (Math.random() < 0.22) emitStar();
+        }
+        if (i >= text.length) {
+          setTyping(false);
+          return; // stop the loop
+        }
       }
-      if (i >= text.length) {
-        clearInterval(id);
-        setTyping(false);
-      }
-    }, 8); // cinematic pacing — slightly slower for emotional feel
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text]);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [text, emitSparkle, emitStar]);
 
   return (
     <div ref={wrapRef} className="relative inline-block">
@@ -319,21 +383,20 @@ function Universe({ onClose }) {
 }
 
 /* ---------------- Floating letter text — no card, blends with universe ---------------- */
-function FloatingLetter({ letter }) {
+function FloatingLetter({ letter, onClose }) {
   const scrollRef = useRef(null);
 
-  // Stop wheel/touch/click from reaching Lenis + Universe close handler
+  // Stop wheel/touch from reaching Lenis (global smooth-scroll on window)
+  // but do NOT stop click — let clicks bubble up to Universe onClick={onClose}
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const stop = (e) => e.stopPropagation();
     el.addEventListener("wheel", stop, { passive: true });
     el.addEventListener("touchmove", stop, { passive: true });
-    el.addEventListener("click", stop, { passive: true });
     return () => {
       el.removeEventListener("wheel", stop);
       el.removeEventListener("touchmove", stop);
-      el.removeEventListener("click", stop);
     };
   }, []);
 
@@ -348,7 +411,7 @@ function FloatingLetter({ letter }) {
       <motion.div
         animate={{ y: [0, -14, 0] }}
         transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-        className="max-w-2xl w-full flex flex-col items-center pointer-events-auto"
+        className="relative max-w-2xl w-full flex flex-col items-center pointer-events-auto"
         style={{ maxHeight: "84vh" }}
       >
         {/* emoji + title — fixed at top, never moves */}
@@ -356,7 +419,7 @@ function FloatingLetter({ letter }) {
           className="mb-6 flex-shrink-0 text-center"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
+          transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-3"
             style={{ background: "linear-gradient(135deg, #8b5cf6, #ec4899)", boxShadow: "0 0 30px rgba(139,92,246,0.5), 0 6px 20px rgba(0,0,0,0.3)" }}>
@@ -376,6 +439,8 @@ function FloatingLetter({ letter }) {
         >
           <UniverseTypewriter text={letter.body} />
         </div>
+
+        <ScrollIndicator scrollRef={scrollRef} />
       </motion.div>
     </motion.div>
   );
@@ -387,7 +452,7 @@ export default function LetterUniverse({ letter, onClose }) {
       {letter && (
         <div className="fixed inset-0 z-[90]">
           <Universe onClose={onClose} />
-          <FloatingLetter letter={letter} />
+          <FloatingLetter letter={letter} onClose={onClose} />
         </div>
       )}
     </AnimatePresence>

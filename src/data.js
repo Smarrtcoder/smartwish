@@ -1,7 +1,7 @@
 // All personalized content and assets for Arshia's birthday experience.
 // Every sentence preserved exactly as specified.
 
-export const PASSWORD = "01012000";
+export const PASSWORD = "01022007";
 
 import musicUrl from "./assets/music.mp3";
 import heroUrl from "./assets/hero.jpg";
@@ -252,10 +252,13 @@ export const COMPLIMENTS = [
   "You have one of the most genuine smiles. 😊\n\nSach mein,\n\naapki smile dekh ke\n\nkisi ka bhi mood achha ho sakta hai.",
   "You have such a positive vibe.\n\nAap bina try kiye hi\n\nsabse alag lagti ho.",
   "Your laugh is honestly adorable.",
-  "Teri simplicity hi\n\nteri sabse achhi quality hai.",
+  "Aapki simplicity hi\n\naapki sabse achhi quality hai.",
   "You make ordinary moments\n\nfeel special.",
   "Aap genuinely\n\none of the sweetest people lagti hai.",
   "Bas hamesha\n\naise hi khush rehna.\n\nThat smile really suits you.\n\n❤️",
+  "bhyyy ek toh mai bata du aapko complements ki zarurat ni hai , samjhe aaap , ur the queen itself .",
+  "aap Messi ki tarah ho… difference bas itna hai ki Messi football mein magic karta hai, aur aap bina try kiye meri poori vibe change kar deti ho. ✨",
+  "Chehra aapka noor,\naur smile mashhoor. ❤️",
 ];
 
 export const BIRTHDAY_WISH = `Happy Birthday, Kiddo! ❤️\n\nMay every wish you made today slowly become reality.\n\nMay this year give you happiness,\n\npeace,\n\nsuccess,\n\ngood health,\n\nlots of laughter,\n\nand beautiful memories.\n\nNever stop smiling.\n\nBecause your smile genuinely makes the world brighter.\n\n🎉🎂🤍`;

@@ -12,7 +12,7 @@ function sRand(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-/* ---- Faster premium typewriter with synchronized sparkles ---- */
+/* ---- Faster premium typewriter with synchronized sparkles (rAF-driven for smoothness) ---- */
 function SecretTypewriter({ text }) {
   const [shown, setShown] = useState("");
   const [typing, setTyping] = useState(false);
@@ -20,6 +20,7 @@ function SecretTypewriter({ text }) {
   const wrapRef = useRef(null);
   const [particles, setParticles] = useState([]);
   const pid = useRef(0);
+  const rafRef = useRef(null);
 
   const emitSparkle = () => {
     const wrap = wrapRef.current;
@@ -45,16 +46,27 @@ function SecretTypewriter({ text }) {
     setTyping(true);
     let i = 0;
     const step = Math.max(1, Math.round(text.length / 250));
-    const id = setInterval(() => {
-      i += step;
-      setShown(text.slice(0, i));
-      if (i < text.length) emitSparkle();
-      if (i >= text.length) {
-        clearInterval(id);
-        setTyping(false);
+    let lastTime = performance.now();
+    const interval = 5;
+
+    const tick = (now) => {
+      if (now - lastTime >= interval) {
+        lastTime = now;
+        i += step;
+        setShown(text.slice(0, i));
+        if (i < text.length) emitSparkle();
+        if (i >= text.length) {
+          setTyping(false);
+          return;
+        }
       }
-    }, 5); // faster typing than the LetterUniverse version
-    return () => clearInterval(id);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
@@ -201,9 +213,61 @@ function SecretUniverse({ onClose }) {
   );
 }
 
+/* ---- Elegant scroll-down indicator for SecretGlassWindow ---- */
+function SecretScrollIndicator({ scrollRef }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let raf;
+    const check = () => {
+      raf = requestAnimationFrame(check);
+      const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 40;
+      setVisible(hasMore);
+    };
+    check();
+    return () => cancelAnimationFrame(raf);
+  }, [scrollRef]);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none z-[96]"
+          initial={{ opacity: 0, y: 8, scale: 0.8 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 8, scale: 0.8 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          <motion.div
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{
+              background: "rgba(245,196,81,0.12)",
+              border: "1px solid rgba(245,196,81,0.35)",
+              boxShadow: "0 0 16px rgba(245,196,81,0.2)",
+              backdropFilter: "blur(4px)",
+            }}
+            animate={{ y: [0, -5, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <motion.span
+              className="text-[#f5c451] text-base"
+              style={{ textShadow: "0 0 8px rgba(245,196,81,0.6)" }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              ↓
+            </motion.span>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /* ---- Crystal glass message window floating in the universe ---- */
 function SecretGlassWindow({ text, onClose }) {
-  const cardRef = useRef(null);
   const scrollRef = useRef(null);
 
   // Stop wheel/touch events from reaching Lenis (global smooth-scroll on window)
@@ -220,13 +284,6 @@ function SecretGlassWindow({ text, onClose }) {
     };
   }, []);
 
-  // Close when clicking outside the letter card
-  const handleBackdropClick = (e) => {
-    if (cardRef.current && !cardRef.current.contains(e.target)) {
-      onClose();
-    }
-  };
-
   return (
     <motion.div
       className="fixed inset-0 z-[95] flex items-start justify-center pt-[8vh] pb-[4vh] px-4 md:px-6"
@@ -234,20 +291,28 @@ function SecretGlassWindow({ text, onClose }) {
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 20 }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      onClick={handleBackdropClick}
+      onClick={onClose}
     >
-      <div
-        ref={cardRef}
+      <motion.div
         className="w-full max-w-2xl crystal-glass rounded-3xl relative flex flex-col"
         style={{ maxHeight: "84vh" }}
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
       >
         {/* title — fixed at top, never moves */}
-        <div className="text-center pt-6 pb-4 md:pt-8 md:pb-5 flex-shrink-0">
+        <motion.div
+          className="text-center pt-6 pb-4 md:pt-8 md:pb-5 flex-shrink-0"
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        >
           <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center text-2xl mb-3"
             style={{ background: "linear-gradient(135deg, #ec4899, #8b5cf6)", boxShadow: "0 0 30px rgba(236,72,153,0.5), 0 6px 20px rgba(0,0,0,0.3)" }}>💖</div>
           <h3 className="font-hand text-3xl md:text-4xl text-[#f5edd6]"
             style={{ textShadow: "0 0 20px rgba(245,196,81,0.5), 0 2px 10px rgba(0,0,0,0.5)" }}>A Little Secret</h3>
-        </div>
+        </motion.div>
 
         {/* scrollable letter content area — grows downward, internal scroll only */}
         <div
@@ -257,7 +322,9 @@ function SecretGlassWindow({ text, onClose }) {
         >
           <SecretTypewriter text={text} />
         </div>
-      </div>
+
+        <SecretScrollIndicator scrollRef={scrollRef} />
+      </motion.div>
     </motion.div>
   );
 }
