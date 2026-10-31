@@ -18,6 +18,7 @@ import Wheel from "@/components/sections/Wheel";
 import Cake from "@/components/sections/Cake";
 import { Compliments, BestFriendMeter } from "@/components/sections/Extras";
 import Finale from "@/components/sections/Finale";
+import ImportantSecret from "@/components/important/ImportantSecret";
 
 function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -88,6 +89,7 @@ function App() {
             <Divider />
             <Finale />
           </main>
+          <ImportantSecret />
         </>
       )}
 
