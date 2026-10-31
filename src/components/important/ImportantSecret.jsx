@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Lock, Sparkles } from "lucide-react";
 import { useIstUnlockClock } from "@/hooks/useIstUnlockClock";
 import ImportantPage from "@/components/important/ImportantPage";
+import ImportantPasswordPage from "@/components/important/ImportantPasswordPage";
+import ImportantPersonalPage from "@/components/important/ImportantPersonalPage";
 
 const MOON_STARS = [
   { x: -16, y: -14, s: 3, d: 0 },
@@ -111,7 +113,7 @@ function CloudBubble() {
 
 export default function ImportantSecret() {
   const { remainingMs, unlocked } = useIstUnlockClock();
-  const [open, setOpen] = useState(false);
+  const [stage, setStage] = useState(null);
   const [celebrate, setCelebrate] = useState(false);
   const wasUnlocked = useRef(unlocked);
 
@@ -120,11 +122,16 @@ export default function ImportantSecret() {
     wasUnlocked.current = unlocked;
   }, [unlocked]);
 
+  const close = useCallback(() => setStage(null), []);
+  const openCountdown = useCallback(() => setStage("countdown"), []);
+  const openPassword = useCallback(() => setStage("password"), []);
+  const openPersonal = useCallback(() => setStage("personal"), []);
+
   return (
     <>
       <motion.button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openCountdown}
         aria-label={unlocked ? "Open the important section" : "Open the locked important section"}
         className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[50] flex items-center gap-2 sm:gap-3 cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c451]/70"
         initial={{ opacity: 0, x: -30 }}
@@ -137,8 +144,12 @@ export default function ImportantSecret() {
         <CloudBubble />
       </motion.button>
 
-      <AnimatePresence>
-        {open && <ImportantPage unlocked={unlocked} remainingMs={remainingMs} onClose={() => setOpen(false)} />}
+      <AnimatePresence mode="wait">
+        {stage === "countdown" && (
+          <ImportantPage key="countdown" unlocked={unlocked} remainingMs={remainingMs} onEnter={openPassword} onClose={close} />
+        )}
+        {stage === "password" && <ImportantPasswordPage key="password" onUnlock={openPersonal} onClose={close} />}
+        {stage === "personal" && <ImportantPersonalPage key="personal" onClose={close} />}
       </AnimatePresence>
     </>
   );
