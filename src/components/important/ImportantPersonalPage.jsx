@@ -1,9 +1,11 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { PERSONAL_PAGE } from "@/data-important";
 import { GlassMessage, ImportantShell, REVEAL, StarField } from "@/components/important/ImportantShared";
 import ImportantMessageEditor from "@/components/important/ImportantMessageEditor";
+import FinalPoll from "@/components/important/FinalPoll";
+import { trackImportantEvent } from "@/lib/siteTracking";
 
 function PersonalBackdrop({ scrollYProgress }) {
   const slowY = useTransform(scrollYProgress, [0, 1], [0, -120]);
@@ -70,6 +72,10 @@ export default function ImportantPersonalPage({ password, onClose }) {
   const { scrollYProgress } = useScroll({ container: scrollRef });
   const { opening, mainMessage, sections, closing } = PERSONAL_PAGE;
 
+  useEffect(() => {
+    trackImportantEvent("personal_viewed");
+  }, []);
+
   return (
     <ImportantShell label="Personal message" onClose={onClose}
       scrollRef={scrollRef} backdrop={<PersonalBackdrop scrollYProgress={scrollYProgress} />}>
@@ -122,6 +128,9 @@ export default function ImportantPersonalPage({ password, onClose }) {
 
         <FlourishDivider />
         <ImportantMessageEditor password={password} />
+
+        <FlourishDivider />
+        <FinalPoll />
       </motion.div>
     </ImportantShell>
   );

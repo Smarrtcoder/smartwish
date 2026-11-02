@@ -19,6 +19,8 @@ import Cake from "@/components/sections/Cake";
 import { Compliments, BestFriendMeter } from "@/components/sections/Extras";
 import Finale from "@/components/sections/Finale";
 import ImportantSecret from "@/components/important/ImportantSecret";
+import SecretSmile from "@/components/SecretSmile";
+import { startVisitTracking } from "@/lib/siteTracking";
 
 function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -39,6 +41,8 @@ function App() {
       const id = setInterval(() => { v += 0.02; if (v >= 0.7) { v = 0.7; clearInterval(id); } a.volume = v; }, 120);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => startVisitTracking(), []);
 
   const handleUnlock = useCallback(() => setUnlocked(true), []);
   const handleStoryEnter = useCallback(() => setStoryEntered(true), []);
@@ -90,6 +94,7 @@ function App() {
             <Finale />
           </main>
           <ImportantSecret />
+          <SecretSmile />
         </>
       )}
 

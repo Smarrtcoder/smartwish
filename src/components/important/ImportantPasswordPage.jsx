@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, useAnimationControls, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 import { verifyImportantPassword } from "@/lib/importantPassword";
+import { trackImportantEvent } from "@/lib/siteTracking";
 import { GoldButton, ImportantShell, StarField } from "@/components/important/ImportantShared";
 
 const WRONG_MESSAGE = "Hmm... That's not quite right. Try again! ✨";
@@ -54,6 +55,7 @@ export default function ImportantPasswordPage({ onUnlock, onClose }) {
     setStatus(null);
     try {
       const ok = await verifyImportantPassword(value);
+      trackImportantEvent(ok ? "password_success" : "password_failure");
       if (ok) {
         onUnlock(value);
         return;

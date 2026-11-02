@@ -154,7 +154,7 @@ function MoonOrb({ unlocked }) {
 function CloudBubble() {
   return (
     <motion.div
-      className="relative w-56 sm:w-64"
+      className="relative w-44 sm:w-52"
       animate={{ y: [0, -6, 0] }}
       transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
     >
@@ -173,7 +173,7 @@ function CloudBubble() {
           <path d={CLOUD_PATH} fill="url(#importantCloudFill)" stroke="rgba(255,240,200,0.9)" strokeWidth="1.5" />
         </svg>
         <motion.span
-          className="absolute inset-0 flex items-center justify-center pb-1 font-serif-display text-sm sm:text-base font-semibold whitespace-nowrap text-[#2b1d4d]"
+          className="absolute inset-0 flex items-center justify-center pb-1 font-serif-display text-xs sm:text-sm font-semibold whitespace-nowrap text-[#2b1d4d]"
           animate={{ textShadow: ["0 0 0px rgba(245,196,81,0)", "0 0 10px rgba(245,196,81,0.75)", "0 0 0px rgba(245,196,81,0)"] }}
           transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
         >
@@ -186,7 +186,7 @@ function CloudBubble() {
 
 export default function ImportantMoon({ unlocked }) {
   return (
-    <div className="flex flex-col items-center gap-7 sm:gap-8">
+    <div className="flex flex-col items-start gap-6 sm:gap-7">
       <CloudBubble />
       <MoonOrb unlocked={unlocked} />
     </div>

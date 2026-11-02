@@ -5,6 +5,7 @@ import ImportantMoon from "@/components/important/ImportantMoon";
 import ImportantPage from "@/components/important/ImportantPage";
 import ImportantPasswordPage from "@/components/important/ImportantPasswordPage";
 import ImportantPersonalPage from "@/components/important/ImportantPersonalPage";
+import { trackImportantEvent } from "@/lib/siteTracking";
 
 export default function ImportantSecret() {
   const { remainingMs, unlocked } = useIstUnlockClock();
@@ -15,7 +16,10 @@ export default function ImportantSecret() {
     setStage(null);
     setPassword(null);
   }, []);
-  const openCountdown = useCallback(() => setStage("countdown"), []);
+  const openCountdown = useCallback(() => {
+    trackImportantEvent("opened");
+    setStage("countdown");
+  }, []);
   const openPassword = useCallback(() => setStage("password"), []);
   const openPersonal = useCallback((verifiedPassword) => {
     setPassword(verifiedPassword);
