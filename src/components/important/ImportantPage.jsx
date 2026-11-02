@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Countdown from "@/components/important/ImportantCountdown";
+import ImportantDevSkip from "@/components/important/ImportantDevSkip";
 import { CloudCard, GoldButton, ImportantShell, SPARK_COLORS, StarField } from "@/components/important/ImportantShared";
 
 function CosmicGlows() {
@@ -100,15 +101,22 @@ function CountdownPanel({ unlocked, remainingMs, onEnter }) {
             </motion.h2>
           ) : (
             <motion.p key="wait-heading"
-              className="relative font-hand text-2xl sm:text-3xl text-[#f5c451] gold-glow"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}>
-              Something is waiting for you...
+              className="relative max-w-2xl px-2 font-serif-display text-xl sm:text-3xl md:text-4xl font-semibold tracking-[0.12em] text-[#fff3d6] leading-[1.2]"
+              initial={{ opacity: 0, y: 18, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.6, ease: "easeOut" }}>
+              <motion.span className="inline-block"
+                animate={{ textShadow: ["0 0 10px rgba(245,196,81,0.25)", "0 0 24px rgba(245,196,81,0.7)", "0 0 10px rgba(245,196,81,0.25)"] }}
+                transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}>
+                ARSHIA, COME BACK HERE WHEN THE TIMER FINISHES...
+              </motion.span>
             </motion.p>
           )}
         </AnimatePresence>
 
         <Countdown remainingMs={remainingMs} />
+
+        {!unlocked && <ImportantDevSkip onSkip={onEnter} />}
 
         <AnimatePresence mode="wait" initial={false}>
           {unlocked ? (

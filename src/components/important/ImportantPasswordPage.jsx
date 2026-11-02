@@ -55,7 +55,7 @@ export default function ImportantPasswordPage({ onUnlock, onClose }) {
     try {
       const ok = await verifyImportantPassword(value);
       if (ok) {
-        onUnlock();
+        onUnlock(value);
         return;
       }
       setStatus("wrong");

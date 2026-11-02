@@ -49,6 +49,29 @@ export function ImportantShell({ label, onClose, backdrop, scrollRef, children }
   );
 }
 
+export const REVEAL = { initial: { opacity: 0, y: 50 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.25 } };
+
+export function GlassMessage({ children }) {
+  return (
+    <motion.div className="relative w-full" {...REVEAL} transition={{ duration: 1.2, ease: "easeOut" }}>
+      <motion.div className="absolute -inset-3 rounded-[2.5rem] blur-2xl pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(244,182,200,0.25), rgba(185,164,255,0.18) 50%, transparent 75%)" }}
+        animate={{ opacity: [0.5, 0.9, 0.5] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} />
+      <motion.div className="relative rounded-[2.5rem] px-7 py-10 sm:px-12 sm:py-14"
+        style={{
+          background: "linear-gradient(160deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))",
+          backdropFilter: "blur(16px) saturate(120%)",
+          WebkitBackdropFilter: "blur(16px) saturate(120%)",
+          border: "1px solid rgba(255,230,200,0.22)",
+          boxShadow: "0 0 50px rgba(244,182,200,0.15), 0 24px 60px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.18)",
+        }}
+        animate={{ y: [0, -6, 0] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}>
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export function CloudCard({ children }) {
   const dust = useRef(
     Array.from({ length: 12 }).map((_, i) => ({ id: i, x: rand(6, 94), y: rand(6, 94), dur: rand(3, 6), delay: i * 0.35, color: SPARK_COLORS[i % SPARK_COLORS.length] }))
